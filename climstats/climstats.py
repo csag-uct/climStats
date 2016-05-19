@@ -5,7 +5,7 @@ import argparse
 import sys
 import slicing
 import functions
-import dataset
+import dataset_old as dataset
 
 
 parser = argparse.ArgumentParser('Calculate climate statistics on station or gridded CF compliant datasets')
@@ -28,6 +28,7 @@ except:
 	sys.exit(1)
 
 print("processing: {}".format(args.source))
+print source.coordinates['time']
 
 try:
 	times = source.coordinates['time']
@@ -44,11 +45,11 @@ if args.aggregation:
 	aggr_params = parts[1:]	
 
 slice_function = eval('slicing.{}'.format(aggregation))
-slices, newtimes = slice_function(times, *aggr_params)
+slices, newtimes = slice_function(times)
 
 print("Aggregating to {} statistics, will produce {} time steps".format(aggregation, len(newtimes)))
 
-outds = netCDF4.Dataset(args.output, 'w', format='NETCDF4_CLASSIC')
+outds = netCDF4.Dataset(args.output, 'w', format='NETCDF4')
 
 for name, dim in source.dimensions.items():
 	if name == 'time':

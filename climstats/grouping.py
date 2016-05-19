@@ -1,10 +1,22 @@
-import pandas as pd
-import datetime
-import xarray as xr
+from collections import OrderedDict
+import netCDF4
 
-def yearmonth(times):
 
-	timestamps = [pd.Timestamp(t) for t in times]
-	yearmonths = [datetime.datetime(ts.year, ts.month, 1) for ts in timestamps]
-	
-	return xr.DataArray(yearmonths, name='yearmonths', dims=['time'])
+def yearmonth(timevar):
+
+	result = OrderedDict()
+
+	datetimes = netCDF4.num2date(timevar[:], timevar.units, calendar=timevar.calendar)
+
+	for index in range(0, len(datetimes)):
+
+		yearmonth = datetimes[index].year, datetimes[index].month
+
+		if yearmonth not in result.keys():
+			result[yearmonth] = [index]
+		else:
+			result[yearmonth].append(index)
+
+	return result
+
+

@@ -31,7 +31,8 @@ def run(func, params, variable, slices, axis=0, *args, **kwargs):
 		data = variable[slices[i]]
 
 		mask[i] = data.count(axis=axis) < float(slices[i].stop - slices[i].start) * valid
-		result[i] = func(data, params=params, axis=axis, *args, **kwargs)
+#		result[i] = func(data, params=params, axis=axis, *args, **kwargs)
+		result[i] = func(data, axis=axis)
 
 	return np.ma.masked_array(result, mask)
 
