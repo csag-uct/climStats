@@ -2,6 +2,7 @@ import numpy as np
 import cfunits
 import copy
 import sys
+from dateutil import parser
 
 import netCDF4
 
@@ -165,12 +166,12 @@ class BaseVariable(object):
 
 	def isubset(self, **kwargs):
 
-		print 'subsetting ', self.name, kwargs
+		print 'subsetting ', self.name, self._subset, kwargs
 		for name, value in kwargs.items():
 
 			if name in self.coords:
-				print 'subsetting ', name, ' coordinate with ', value
 				coord = self.coords[name]
+				print 'subsetting ', name, ' coordinate ', coord[:], ' with ', value
 
 				# For now we can't do multi dimensional coordinate variables
 				if len(coord.shape) > 1:
@@ -188,13 +189,17 @@ class BaseVariable(object):
 
 				print 'start, stop = ', start, stop
 
-				# Check if the new start is going to go beyond existing subset
-				if start > self._subset[i].stop - self._subset[i].start:
-					start = self._subset[i].stop
-				
-				# Check if the new stop is going to go beyond existing subset
+				# Add to original start
+				start += self._subset[i].start
+				stop += self._subset[i].stop
+
+				if start >= self._subset[i].stop:
+					start = self._subset[i].stop - 1
+
 				if stop > self._subset[i].stop:
-					stop = self._subset[i].stop
+					stop = self._subset[i].stop	
+
+				print 'new start, stop = ', start, stop
 
 				newsubset = list(self._subset)
 				newsubset[i] = slice(start, stop)	
@@ -207,6 +212,60 @@ class BaseVariable(object):
 				self.coords[name]._subset = (self._subset[i],)
 				self.coords[name]._shape = (self._subset[i].stop - self._subset[i].start,)
 
+
+	def isubset_copy(self, **kwargs):
+
+		newvar = self.copy()
+
+		print 'subsetting ', newvar.name, newvar._subset, kwargs
+		for name, value in kwargs.items():
+
+			if name in newvar.coords:
+				coord = newvar.coords[name]
+				print 'subsetting ', name, ' coordinate ', coord[:], ' with ', value
+
+				# For now we can't do multi dimensional coordinate variables
+				if len(coord.shape) > 1:
+					raise NotImplementedError("multi dimensional coordinate subsetting not yet implemented")
+
+				# Find the relevant dimension
+				i = newvar.dimensions.index(coord.dimensions[0])
+
+				if type(value) == tuple:
+					start, stop = value
+				if type(value) == int:
+					start, stop = value, value+1
+				if type(value) == slice:
+					start, stop = value.start, value.stop
+
+				print 'start, stop = ', start, stop
+
+				# Add to original start
+				start += newvar._subset[i].start
+				stop += newvar._subset[i].stop
+
+				if start >= newvar._subset[i].stop:
+					start = newvar._subset[i].stop - 1
+
+				if stop > newvar._subset[i].stop:
+					stop = newvar._subset[i].stop	
+
+				print 'new start, stop = ', start, stop
+
+				newsubset = list(newvar._subset)
+				newsubset[i] = slice(start, stop)	
+				newvar._subset = tuple(newsubset)
+
+				newvar._shape = tuple([s.stop - s.start for s in newvar._subset])
+
+				# Now we need to copy the coordinate variable and subset it
+				newvar.coords[name] = coord.copy()
+				newvar.coords[name]._subset = (newvar._subset[i],)
+				newvar.coords[name]._shape = (newvar._subset[i].stop - newvar._subset[i].start,)
+
+		return newvar
+
+
 	def subset(self, **kwargs):
 
 		newargs = {}
@@ -215,14 +274,29 @@ class BaseVariable(object):
 			if name in self.coords:
 
 				coord = self.coords[name]
+				print "subset using ", coord[:], coord._subset
 
 				if type(value) == tuple:
-					start, stop = tuple([coord[:].searchsorted(v) for v in value])
+					start, stop = value
 				else:
-					start = stop = coord[:].searchsorted(value)
+					start = stop = value
 
-				stop += 1
-				newargs[name] = slice(start, stop)
+				print "subset start, stop ", start, stop
+
+				# try and coerce into datetimes
+				try:
+					start = netCDF4.date2num(parser.parse(start), coord.attributes['units'])
+				except:
+					pass
+
+				try:
+					stop = netCDF4.date2num(parser.parse(stop), coord.attributes['units'])
+				except:
+					pass
+
+				print "subset start, stop ", start, stop
+
+				newargs[name] = slice(coord[:].searchsorted(start), coord[:].searchsorted(stop)+1)
 
 		print 'newargs = ', newargs
 		self.isubset(**newargs)
@@ -230,7 +304,7 @@ class BaseVariable(object):
 
 
 	def __repr__(self):
-		return "<Variable: {} {} {}>".format(self.name, self.dtype.__name__, self.shape)
+		return "<Variable: {} {} {} {}>".format(self.name, self.dtype.__name__, self.shape, self._subset)
 
 
 class Variable(BaseVariable):
@@ -406,38 +480,62 @@ if __name__ == "__main__":
 	tvar = Variable('time', ds, dimensions=['time'], attributes={'units':'days since 1977-01-01'})
 	var = Variable('test', ds, dimensions=['time', 'latitude', 'longitude'])
 	print var
-	print var._data
-	print var.dataset
-	print var.dataset.variables
+	print tvar
+#	print var._data
+#	print var.dataset
 	print ds.variables
 	print ds.coords
+	print
 
 	var[:10,] = 42.0
-	print var[:10,]
+#	print var[:10,]
+	print ds.variables
+	print ds.coords
+	print
 
 	var[40:50,] = 13.0
-	print var[40:60]
-	print var.shape
+#	print var[40:60]
+	print ds.variables
+	print ds.coords
+	print
 
 	tvar[:] = np.arange(var.shape[0])+100
-
+	print ds.variables
 	print ds.coords
+	print
+
+
+	print 'subsetting'
+	print var.isubset_copy(time=(109,120))
+	print var
 	print var.coords
+	print
 
-	print var._subset
-	var.subset(time=(109,120))
-	print var._subset
-	print var[:]
+	print 'subsetting2'
+	print var.isubset_copy(time=(109,120))
+	print var
+	print var.coords
+	print 
 
-	print var.coords['time']
-	print var.coords['time'][:]
-	print ds.coords['time'][:]
 
+	print 'NetCDF4Dataset'
 	ds = NetCDF4Dataset(sys.argv[1])
 	print ds.dimensions
 	print ds.coords
 	print ds.variables
+	print ds.variables['pr'].attributes
 	print
 
-	print ds.coords['time'][:]
+	ds.variables['pr'].subset(time='2016-12-31')
+	print ds.variables['pr'].coords
+	print netCDF4.num2date(ds.variables['pr'].coords['time'][:], ds.variables['pr'].coords['time'].attributes['units'])
+	print
 
+	ds.variables['pr'].subset(time='1800-12-31')
+	print ds.variables['pr'].coords
+	print netCDF4.num2date(ds.variables['pr'].coords['time'][:], ds.variables['pr'].coords['time'].attributes['units'])
+	print
+
+	ds.variables['pr'].subset(time=('1977-1-1', '1977-1-30'))
+	print ds.variables['pr'].coords
+	print netCDF4.num2date(ds.variables['pr'].coords['time'][:], ds.variables['pr'].coords['time'].attributes['units'])
