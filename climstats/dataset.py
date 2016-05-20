@@ -29,7 +29,7 @@ class GroupBy(object):
 		self.variable = variable
 		self.coordinate = coordinate
 
-	def apply(self, func):
+	def apply(self, func, params=None, name=None, tolerance=0.0):
 
 		axis = self.variable.dimensions.index(self.coordinate.dimensions[0])
 
@@ -50,13 +50,14 @@ class GroupBy(object):
 
 		ds.attributes = copy.copy(self.variable.dataset.attributes)
 
-		newname = "{}_{}_{}".format(self.variable.name, self.name, func.__name__)
-		result = Variable(newname, ds, [dim.name for dim in self.variable.dimensions], dtype=self.variable.dtype)
+		if not name:
+			name = "{}_{}".format(self.variable.name, func.__name__)
+
+		result = Variable(name, ds, [dim.name for dim in self.variable.dimensions], dtype=self.variable.dtype, attributes=self.variable.attributes)
 		result.attributes = copy.copy(self.variable.attributes)
 
 		newcoord = Variable(self.coordinate.name, ds, [self.coordinate.dimensions[0].name], dtype=self.coordinate.dtype)
 		newcoord.attributes = copy.copy(self.coordinate.attributes)
-
 
 		source_slices = copy.copy(slices)
 		target_slices = copy.copy(slices)
@@ -64,13 +65,22 @@ class GroupBy(object):
 		index = 0
 		for group, indices in self.groups.items():
 			
-			source_slices[axis] = np.array(indices)
-#			source_slices[axis] = slice(indices[0], indices[-1]+1)
+			source_slices[axis] = indices
 			target_slices[axis] = index
 
-			result[tuple(target_slices)] = func(self.variable[tuple(source_slices)])
-			newcoord[(target_slices[axis],)] = self.coordinate[tuple(source_slices)[axis]][-1]
+			print source_slices[axis]
+
+			if params:
+				tmp = func(self.variable[tuple(source_slices)], params=params, axis=axis)
+			else:
+				tmp = func(self.variable[tuple(source_slices)], axis=axis)
 			
+			mask = np.ma.count_masked(self.variable[tuple(source_slices)], axis=axis)/self.variable.shape[axis] > tolerance
+
+			result[tuple(target_slices)] = np.ma.masked_array(tmp, mask=mask)
+			newcoord[(target_slices[axis],)] = self.coordinate[tuple(source_slices)[axis]][-1]
+
+			print newcoord[(target_slices[axis],)]
 			index += 1
 
 		for name, variable in self.variable.coords.items():
@@ -130,12 +140,13 @@ class Dimension(object):
 
 class BaseVariable(object):
 
-	def __init__(self, name, dataset, dimensions, dtype=np.float32, attributes={}):
+	def __init__(self, name, dataset, dimensions, attributes={}, dtype=np.float32, fillvalue=1e10):
 #		print("{}.__init__: {}".format(self.__class__.__name__, dtype))
 
 		self.name = name
 		self._dimensions = []
 		self._dtype = dtype
+		self._fillvalue = fillvalue
 		self.attributes = {}
 		self.coords = {}
 		self.iscoordinate = False
@@ -146,8 +157,7 @@ class BaseVariable(object):
 
 		# Load attributes
 		for key, value in attributes.items():
-			if type(value) in [str, unicode]:
-				self.attributes[key] = value
+			self.attributes[key] = value
 
 		shape = [dim.size for dim in self._dimensions]
 		self._shape = tuple(shape)
@@ -171,7 +181,47 @@ class BaseVariable(object):
 	    return self._dtype
 
 	def __getitem__(self, indices):
-		raise NotImplementedError('__getitem__ method not implemented for {}'.format(self.__class__.__name__))
+		"""
+		Just merges indices with the variables current subset
+		"""
+		newindices = []
+
+		if type(indices) != tuple:
+			indices = (indices,)
+
+
+		for i in range(len(indices)):
+
+			if type(indices[i]) == list:
+				newindices.append(np.array(indices[i]) + self._subset[i].start)
+
+			elif type(indices[i]) == np.ndarray:
+				newindices.append(indices[i] + self._subset[i].start)
+
+			elif type(indices[i]) == int:
+				newindices.append(indices[i] + self._subset[i].start)
+
+			elif type(indices[i]) == slice:
+				start = indices[i].start
+				stop = indices[i].stop
+
+				if not start:
+					start = self._subset[i].start
+				else:
+					start += self._subset[i].start
+
+				if not stop:
+					stop = self._subset[i].stop
+				else:
+					stop += self._subset[i].start
+
+				newindices.append(slice(start, stop))
+
+
+#		print "._data[{}]".format(tuple(newindices))
+
+		return self._data[tuple(newindices)]
+
 
 	def copy(self):
 		return copy.copy(self)
@@ -184,7 +234,7 @@ class BaseVariable(object):
 		__setitem__(indices, value): Implements array setting with ability to resize/extend along
 		the unlimited dimension(s)
 		"""
-		print indices
+
 		# force indices to be a tuple
 		if type(indices) == slice:
 			indices = (indices,)
@@ -220,7 +270,6 @@ class BaseVariable(object):
 		
 		# See if the shape has changed
 		if newshape != self.shape:
-			print 'setitem resizing to ', newshape, ' using ', indices
 			self.resize(tuple(newshape))
 
 		# Resize associated coordinate variables
@@ -237,6 +286,7 @@ class BaseVariable(object):
 			if len(newshape):
 				variable.resize(newshape)
 
+		self._data[indices] = value
 
 	def makecoords(self):
 
@@ -392,13 +442,26 @@ class BaseVariable(object):
 
 		coordname, funcname = param.split('.')
 
+		# Get the coordinate variable
+		coordinate = self.coords[coordname]
+
 		# Try and get the function
 		try:
 			func = eval('grouping.{}'.format(funcname))
 		except:
 			pass
 
-		return GroupBy(funcname, self, self.coords[coordname], func(self.coords[coordname]))
+		# Run the grouping funciton on the coordinate variable
+		groups = func(coordinate)
+
+		# Check if we can convert any groups to slices (1 dimensionsal coordinate only for now!)
+		if len(coordinate.shape) == 1:
+
+			for key, indices in groups.items():
+				if (indices[-1] - indices[0] + 1) == len(indices):
+					groups[key] = slice(indices[0], indices[-1] + 1)
+
+		return GroupBy(funcname, self, coordinate, groups)
 
 
 
@@ -409,18 +472,25 @@ class BaseVariable(object):
 class Variable(BaseVariable):
 
 	def __init__(self, *args, **kwargs):
-#		print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
+		print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
 		super(Variable, self).__init__(*args, **kwargs)
-		self._data = np.empty(self.shape, dtype=self.dtype)
 
-	def __getitem__(self, indices):
+		if self.dtype == str:
+			self._data = np.empty(self.shape, dtype=object)
+		else:
+			self._data = np.ma.empty(self.shape, dtype=self.dtype)
+
+#	def __getitem__(self, indices):
 #		print("{}.__getitem__: {}".format(self.__class__.__name__, indices))
-		return self._data[self._subset][indices]
+#		return self._data[self._subset][indices]
 
-	def __setitem__(self, indices, value):
+#	def __setitem__(self, indices, value):
 #		print("{}.__setitem__: {}".format(self.__class__.__name__, indices))
-		super(Variable, self).__setitem__(indices, value)
-		self._data[self._subset][indices] = value
+#		print value
+#		super(Variable, self).__setitem__(indices, value)
+
+#		self._data[self._subset][indices] = value
+#		print 
 
 	def copy(self):
 		new  = super(Variable, self).copy()
@@ -439,9 +509,9 @@ class NetCDF4Variable(BaseVariable):
 		super(NetCDF4Variable, self).__init__(*args, **kwargs)
 		self._data = self.dataset.ncfile.variables[self.name]
 
-	def __getitem__(self, indices):
+#	def __getitem__(self, indices):
 #		print("{}.__getitem__: {}".format(self.__class__.__name__, indices))
-		return self._data[self._subset][indices]
+#		return self._data[self._subset][indices]
 
 	def __setitem__(self, indices, value):
 #		print("{}.__setitem__: {}".format(self.__class__.__name__, indices))
@@ -517,6 +587,11 @@ class Dataset(object):
 			#print name, units, coordinate
 			
 			if coordinate:
+
+				# Ignore not valid time coordinates!
+				if coordinate == 'time' and name != 'time':
+					continue
+
 				self.coords[coordinate] = variable
 				self.coords[coordinate].iscoordinate = True
 
@@ -596,11 +671,11 @@ class NetCDF4Dataset(Dataset):
 		for name, variable in dataset._allvariables.items():
 			print 'writing variable ', name, variable, variable.dtype
 			var = ncfile.createVariable(name, variable.dtype, [dim.name for dim in variable.dimensions])
-			var[:] = variable[:]
 
 			for key, value in variable.attributes.items():
 				var.setncattr(key, value)
 
+			var[:] = variable[:]
 
 		ncfile.close()
 
