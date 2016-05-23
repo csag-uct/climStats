@@ -236,7 +236,7 @@ class BaseVariable(object):
 		"""
 
 		# force indices to be a tuple
-		if type(indices) == slice:
+		if type(indices) == slice or type(indices) == int:
 			indices = (indices,)
 
 		# Now make it a list
@@ -270,21 +270,22 @@ class BaseVariable(object):
 		
 		# See if the shape has changed
 		if newshape != self.shape:
+
 			self.resize(tuple(newshape))
 
-		# Resize associated coordinate variables
-		coord_indices = []
-		for coord, variable in self.coords.items():
-			for dim in variable.dimensions:
-				try:
-					coord_indices.append(variable.dimensions.index(dim))
-				except:
-					continue
+			# Resize associated coordinate variables
+			coord_indices = []
+			for coord, variable in self.coords.items():
+				for dim in variable.dimensions:
+					try:
+						coord_indices.append(variable.dimensions.index(dim))
+					except:
+						continue
 
-			newshape = tuple([newshape[i] for i in coord_indices])
-			
-			if len(newshape):
-				variable.resize(newshape)
+				newshape = tuple([newshape[i] for i in coord_indices])
+				
+				if len(newshape):
+					variable.resize(newshape)
 
 		self._data[indices] = value
 
@@ -658,7 +659,7 @@ class NetCDF4Dataset(Dataset):
 	@classmethod
 	def write(cls, dataset, filename):
 
-		ncfile = netCDF4.Dataset(filename, 'w')
+		ncfile = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 
 		for key, value in dataset.attributes:
 			ncfile.setncattr(key, value)
@@ -670,7 +671,13 @@ class NetCDF4Dataset(Dataset):
 
 		for name, variable in dataset._allvariables.items():
 			print 'writing variable ', name, variable, variable.dtype
-			var = ncfile.createVariable(name, variable.dtype, [dim.name for dim in variable.dimensions])
+
+			if variable.dtype == object:
+				dtype = str
+			else:
+				dtype = variable.dtype
+
+			var = ncfile.createVariable(name, dtype, [dim.name for dim in variable.dimensions])
 
 			for key, value in variable.attributes.items():
 				var.setncattr(key, value)

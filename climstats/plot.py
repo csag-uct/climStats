@@ -12,18 +12,19 @@ variable = ds.variables[sys.argv[2]]
 
 times = variable.coords['time']
 realtimes = netCDF4.num2date(times[:], times.attributes['units'])
-print realtimes
+print realtimes[0], realtimes[-1]
 
 ids = ds.ancil['id']
-names = ds.ancil['name']
+print ids[:]
+#names = ds.ancil['name']
 
 if len(sys.argv) < 4:
 	for name in names:
 		print name
 
 else:
-	index = list(names[:]).index(sys.argv[3])
-	print names[index]
+	index = list(ids[:]).index(int(sys.argv[3]))
+	#print names[index]
 
 	values = variable[:,index]
 
