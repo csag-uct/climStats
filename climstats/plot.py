@@ -16,14 +16,14 @@ print realtimes[0], realtimes[-1]
 
 ids = ds.ancil['id']
 print ids[:]
-#names = ds.ancil['name']
+names = ds.ancil['name']
 
 if len(sys.argv) < 4:
 	for name in names:
 		print name
 
 else:
-	index = list(ids[:]).index(int(sys.argv[3]))
+	index = list(names[:]).index(sys.argv[3])
 	#print names[index]
 
 	values = variable[:,index]

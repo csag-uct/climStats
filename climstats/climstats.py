@@ -9,6 +9,7 @@ import dataset
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 parser = argparse.ArgumentParser('Calculate climate statistics on station or gridded CF compliant datasets')
@@ -16,30 +17,71 @@ parser.add_argument('source', type=str)
 parser.add_argument('variable', type=str)
 parser.add_argument('-a', '--aggregation', type=str, required=True)
 parser.add_argument('-s', '--statistic', type=str, required=True)
+parser.add_argument('-n', '--outname', type=str)
+parser.add_argument('--scale', type=float, default=1.0)
+parser.add_argument('--offset', type=float, default=0.0)
+parser.add_argument('--tolerance', type=float, default=1.0)
+parser.add_argument('--above', type=str)
+parser.add_argument('--below', type=str)
+parser.add_argument('--window_func', type=str)
+parser.add_argument('--window', type=str)
+
 parser.add_argument('-o', '--output', type=str, required=True)
 args = parser.parse_args()
 
 varname = args.variable
 statistic = args.statistic.split(',')[0]
-params = args.statistic.split(',')[1:]
-#aggregation = args.aggregation.split(',')
+scale = args.scale
+offset = args.offset
+tolerance = args.tolerance
 
+if args.outname:
+	outname = args.outname
+else:
+	outname = varname
 
 # Try and open source dataset
 try:
 	source = dataset.NetCDF4Dataset(args.source)
 except:
-	logging.error("cannot open source dataset: {}".format(args.source))
-	logging.error(sys.exc_info())
+	logger.error("cannot open source dataset: {}".format(args.source))
+	logger.error(sys.exc_info())
 	sys.exit(1)
 
-logging.info("processing variable {} from {} ".format(varname, args.source))
+logger.info("processing variable {} from {} ".format(varname, args.source))
 
 variable = source.variables[varname]
 
+params = {}
+
+for name, value in vars(args).items():
+	if name in ['above', 'below', 'window_func', 'window'] and value != None:
+
+		# try and coerce to an integer, then a float, or leave as string
+		try:
+			value = int(value)
+		except:
+			try:
+				value = float(value)
+			except:
+				pass
+
+		# See if above or below are percentile expressions
+		if name in ['above', 'below'] and type(value) == str:
+			if value[-2:] == 'th':
+				pvalue = float(value[:-2])
+				data = variable[:] * scale + offset
+				if type(data) == np.ma.MaskedArray:
+					value = np.nanpercentile(data.filled(np.nan), pvalue, axis=0)
+				else:
+					value = np.percentile(data, pvalue, axis=0)
+
+		params[name] = value
+		logger.info("{} set to {} ({})".format(name, value, type(value)))
+
 groups = variable.groupby(args.aggregation)
 
-result = groups.apply(functions.registry[statistic]['function'], params=params, name=varname, tolerance=0.8)
+result = groups.apply(functions.registry[statistic]['function'], name=outname, outunits=functions.registry[statistic]['units'], tolerance=tolerance, scale=scale, offset=offset, **params)
 
 dataset.NetCDF4Dataset.write(result, args.output)
 

@@ -7,7 +7,10 @@ from dateutil import parser
 import netCDF4
 import grouping
 
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 class DatasetException(Exception):
 	"""
@@ -29,11 +32,22 @@ class GroupBy(object):
 		self.variable = variable
 		self.coordinate = coordinate
 
-	def apply(self, func, params=None, name=None, tolerance=0.0):
+	def apply(self, func, name=None, outunits=None, tolerance=0.0, scale=1.0, offset=0.0, **params):
+		"""
+		func: The function to call, must be a callable and take an numpy array or equivalent as its first argument
+		name: If specified, the resultant variable will be named using this parameter
+		tolerance: The fraction of masked source values (along the axis) tolerated before masking the result
+		scale: Scale factor to apply to source values
+		offset: Offset to apply to source values
+		"""
 
+		logger.debug("{}.apply({}, {}, {}, {}, {}".format(self.__class__.__name__, func.__name__, name, tolerance, scale, offset, params))
+
+		# Identify the axis index of the coordinate
 		axis = self.variable.dimensions.index(self.coordinate.dimensions[0])
+		logger.debug("axis = {}".format(axis))
 
-		# Create dimensions
+		# Create dimensions for the resultant dataset and construct matching slices
 		dims = []
 		slices = []
 		for i in range(0, len(self.variable.dimensions)):
@@ -41,60 +55,78 @@ class GroupBy(object):
 			dim = self.variable.dimensions[i]
 			slices.append(slice(0, dim.size))
 
+			# The axis dimension size is the number of groups, others are original size
 			if i == axis:
 				dims.append((dim.name, len(self.groups), dim.isunlimited))
 			else:
 				dims.append((dim.name, dim.size, dim.isunlimited))
 
+		# Create an in memory dataset and copy attributes
 		ds = Dataset(dimensions=dims)
-
 		ds.attributes = copy.copy(self.variable.dataset.attributes)
+		logger.debug("Created {}".format(repr(ds)))
 
+		# If we don't have variable name, construct one from the original name and the function name
 		if not name:
 			name = "{}_{}".format(self.variable.name, func.__name__)
 
+		# Make the results variable and copy original attributes
 		result = Variable(name, ds, [dim.name for dim in self.variable.dimensions], dtype=self.variable.dtype, attributes=self.variable.attributes)
 		result.attributes = copy.copy(self.variable.attributes)
+		if outunits:
+			result.attributes['units'] = outunits
+		logger.debug("Created {}".format(result))
 
+		# Make the new coordinate variable
 		newcoord = Variable(self.coordinate.name, ds, [self.coordinate.dimensions[0].name], dtype=self.coordinate.dtype)
 		newcoord.attributes = copy.copy(self.coordinate.attributes)
+		logger.debug("Created {}".format(newcoord))
 
+		# Initialize the source and target slices
 		source_slices = copy.copy(slices)
 		target_slices = copy.copy(slices)
 
+		# Now we loop through the groups
 		index = 0
 		for group, indices in self.groups.items():
 			
+			# Set the source and target slices
 			source_slices[axis] = indices
 			target_slices[axis] = index
 
-			print source_slices[axis]
-
-			if params:
-				tmp = func(self.variable[tuple(source_slices)], params=params, axis=axis)
-			else:
-				tmp = func(self.variable[tuple(source_slices)], axis=axis)
+			logger.debug("source[{}]".format(tuple(source_slices)))
 			
-			mask = np.ma.count_masked(self.variable[tuple(source_slices)], axis=axis)/self.variable.shape[axis] > tolerance
+			source = self.variable[tuple(source_slices)] * scale + offset
+			#logger.debug("{} masked values in source data".format(np.ma.count_masked(source)))
 
-			result[tuple(target_slices)] = np.ma.masked_array(tmp, mask=mask)
+			unmasked = func(source, axis=axis, **params)
+			mask = np.ma.count(self.variable[tuple(source_slices)], axis=axis)/float(source.shape[axis]) < tolerance
+
+			result[tuple(target_slices)] = np.ma.masked_array(unmasked, mask=mask)
 			newcoord[(target_slices[axis],)] = self.coordinate[tuple(source_slices)[axis]][-1]
 
-			print newcoord[(target_slices[axis],)]
+			logger.debug("{} masked values in target data".format(np.ma.count_masked(result[tuple(target_slices)])))
+
 			index += 1
 
+		# Create the coordinate variables
 		for name, variable in self.variable.coords.items():
-
 			if variable != self.coordinate:
-				newvar = Variable(name, ds, [dim.name for dim in variable.dimensions], dtype=variable.dtype)
+				newvar = Variable(variable.name, ds, [dim.name for dim in variable.dimensions], dtype=variable.dtype)
 				newvar.attributes = copy.copy(variable.attributes)
 				newvar[:] = variable[:]
 		
-
+		# Create the ancilary variables
 		for name, variable in self.variable.dataset.ancil.items():
-			newvar = Variable(name, ds, [dim.name for dim in variable.dimensions], dtype=variable.dtype)
-			newvar[:] = variable[:]
-			newvar.attributes = copy.copy(variable.attributes)
+			try:
+				newvar = Variable(name, ds, [dim.name for dim in variable.dimensions], dtype=variable.dtype)
+				newvar[:] = variable[:]
+				newvar.attributes = copy.copy(variable.attributes)
+			
+			# This might fail if the ancil variable uses dimensions not defined through the source variable... ignore these
+			except:
+				print("WARNING: Error writing ancil variable {}".format(name))
+				print(sys.exc_info()[0])
 
 		return ds
 
@@ -467,13 +499,13 @@ class BaseVariable(object):
 
 
 	def __repr__(self):
-		return "<Variable: {} {} {} {}>".format(self.name, self.dtype, self.shape, self._subset)
+		return "<Variable: {} {} {}>".format(self.name, self.shape, self.dtype)
 
 
 class Variable(BaseVariable):
 
 	def __init__(self, *args, **kwargs):
-		print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
+		#print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
 		super(Variable, self).__init__(*args, **kwargs)
 
 		if self.dtype == str:
@@ -635,6 +667,8 @@ class Dataset(object):
 			except:
 				pass
 
+	def __repr__(self):
+		return "<{}: dims[{}] variables[{}]>".format(self.__class__.__name__, self.dimensions.keys(), self.variables.keys())
 
 
 class NetCDF4Dataset(Dataset):

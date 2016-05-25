@@ -1,74 +1,86 @@
 import numpy as np
 import scipy
 
+def not_masked(data, axis):
+	return data.getmaskarray().all(axis=0).astype(np.int16)
+
+def generic(data, func, axis=0, above=None, below=None, **kwargs):
+
+	# Mask less than above and greater than below
+	if above != None:
+		data = np.ma.masked_array(data, data <= above)
+	if below != None:
+		data = np.ma.masked_array(data, data >= below)
+
+	#print func(data, axis=axis)
+
+#	return np.ma.filled(func(data, axis=axis), fill_value=0.0)
+	return func(data, axis=axis)
+
+	
+def mean(data, **kwargs):
+	return generic(data, np.ma.mean, **kwargs)
+
+def total(data, **kwargs):
+	return generic(data, np.ma.sum, **kwargs)
+
+def maximum(data, **kwargs):
+	return generic(data, np.ma.max, **kwargs)
+
+def minimum(data, **kwargs):
+	return generic(data, np.ma.min, **kwargs)
+
+def days(data, axis=0, **kwargs):
+	return generic(data, np.ma.count, **kwargs)
 
 
-def days_above(data, params=[0], axis=0):
-	return np.ma.masked_less_equal(data, float(params[0])).count(axis=axis)
+def window_generic(data, func, axis=0, window=1, above=None, below=None, window_func=np.ma.sum):
 
-def days_below(data, params=[0], axis=0):
-	return np.ma.masked_greater_equal(data, float(params[0])).count(axis=axis)
+	# Mask less than above and greater than below
+	if above:
+		data = np.ma.masked_less(data, above)
+	if below:
+		data = np.ma.masked_greater(data, below)
 
-def window_sum_above(data, params=[5,0], axis=0):
+	tsteps = data.shape[axis]
 
-	window = int(params[0])
-	above = float(params[1])
-
-	print 'window_sum_above ', window, above
 	shape = list(data.shape)
-	tsteps = shape[axis]
-
+	
 	shape[axis] = 1
 	result = np.ma.zeros(tuple(shape), dtype=np.int16)
 
+	shape[axis] = tsteps - window + 1
+	tmp = np.ma.zeros(tuple(shape), dtype=np.int16)
+
 	for i in range(0, tsteps-window):
-		result += (data[i:i+window].sum(axis=axis) > above).astype(int)
+		tmp[i] = window_func(data[i:i+window], axis=axis)
+
+	result[:] = func(tmp, axis=axis)
 
 	return result
 
-def window_mean_above(data, params=[5,0], axis=0):
+def window_mean(data, **kwargs):
+	return window_generic(data, np.ma.mean, **kwargs)
 
-	window = int(params[0])
-	above = float(params[1])
+def window_total(data, **kwargs):
+	return window_generic(data, np.ma.sum, **kwargs)
 
-	print 'window_sum_above ', window, above
-	shape = list(data.shape)
-	tsteps = shape[axis]
+def window_maximum(data, **kwargs):
+	return window_generic(data, np.ma.max, **kwargs)
 
-	shape[axis] = 1
-	result = np.ma.zeros(tuple(shape), dtype=np.int16)
+def window_minimum(data, **kwargs):
+	return window_generic(data, np.ma.min, **kwargs)
 
-	for i in range(0, tsteps-window):
-		result += (data[i:i+window].mean(axis=axis) > above).astype(int)
-
-	return result
-
-
-def window_min_above(data, params=[5,0], axis=0):
-
-	window = int(params[0])
-	above = float(params[1])
-
-	print 'window_sum_above ', window, above
-	shape = list(data.shape)
-	tsteps = shape[axis]
-
-	shape[axis] = 1
-	result = np.ma.zeros(tuple(shape), dtype=np.int16)
-
-	for i in range(0, tsteps-window):
-		result += (np.ma.min(data[i:i+window], axis=axis) > above).astype(int)
-
-	return result
-
+def window_days(data, **kwargs):
+	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
 registry = {
-	'mean': {'function': np.ma.mean, 'units':None },
-	'sum': {'function': np.ma.mean, 'units':None },
-	'max': {'function': np.ma.mean, 'units':None },
-	'min': {'function': np.ma.mean, 'units':None },
-	'days_above': {'function': days_above, 'units':'days'},
-	'days_below': {'function': days_above, 'units':'days'},
-	'window_min_above': {'function': window_min_above, 'units':'days'}
+	'mean': {'function': mean, 'units':None },
+	'total': {'function': total, 'units':None },
+	'maximum': {'function': maximum, 'units':None },
+	'minimum': {'function': minimum, 'units':None },
+	'days': {'function': days, 'units':'days'},
+	'rolling_maximum': {'function': window_maximum, 'units':None},
+	'rolling_days': {'function': window_days, 'units':'days'}
 }

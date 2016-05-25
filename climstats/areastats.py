@@ -92,13 +92,16 @@ for feature in shpfile:
 		y += 1
 
 	for name, variable in ds.variables.items():
-		print name
-		axes = tuple(range(1,len(variable.shape)))
-		print axes
-		tmp = np.sum(variable[:] * weights[feature_id], axis=axes, keepdims=True)
-		tmp = tmp.reshape((tmp.shape[0],1))
-		print tmp.shape
-		outvars[name][:,feature_id] = tmp
+		try:
+			print name
+			axes = tuple(range(1,len(variable.shape)))
+			print axes
+			tmp = np.sum(variable[:] * weights[feature_id], axis=axes, keepdims=True)
+			tmp = tmp.reshape((tmp.shape[0],1))
+			print tmp.shape
+			outvars[name][:,feature_id] = tmp
+		except:
+			pass
 
 
 	idvar[feature_id] = feature_id
