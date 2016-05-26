@@ -14,8 +14,7 @@ def generic(data, func, axis=0, above=None, below=None, **kwargs):
 
 	#print func(data, axis=axis)
 
-#	return np.ma.filled(func(data, axis=axis), fill_value=0.0)
-	return func(data, axis=axis)
+	return np.ma.filled(func(data, axis=axis), fill_value=0.0)
 
 	
 def mean(data, **kwargs):

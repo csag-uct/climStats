@@ -66,8 +66,10 @@ for name, value in vars(args).items():
 			except:
 				pass
 
-		# See if above or below are percentile expressions
+		# See if above or below are percentile expressions or refer to another dataset
 		if name in ['above', 'below'] and type(value) == str:
+			
+			# First a percentile value
 			if value[-2:] == 'th':
 				pvalue = float(value[:-2])
 				data = variable[:] * scale + offset
@@ -75,6 +77,24 @@ for name, value in vars(args).items():
 					value = np.nanpercentile(data.filled(np.nan), pvalue, axis=0)
 				else:
 					value = np.percentile(data, pvalue, axis=0)
+
+			# Now check for another dataset
+			else:
+				parts = value.split(":")
+				
+				if len(parts) > 1:
+					otherfilename = parts[0]
+					othervarname = parts[1]
+
+				if len(parts) > 2:
+					othertimestep = int(parts[2])
+				else:
+					othertimestep = 0
+
+				otherds = dataset.NetCDF4Dataset(otherfilename)
+				othervariable = otherds.variables[othervarname]
+				value = othervariable[othertimestep]
+
 
 		params[name] = value
 		logger.info("{} set to {} ({})".format(name, value, type(value)))
