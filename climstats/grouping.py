@@ -48,6 +48,7 @@ def year(timevar):
 
 	result = OrderedDict()
 
+	print("Using calendar = ", timevar.calendar)
 	# We have to assume the variable is a CF time index
 	try:
 		datetimes = netCDF4.num2date(timevar[:], timevar.units, calendar=timevar.calendar)

@@ -125,7 +125,7 @@ class GroupBy(object):
 			
 			# This might fail if the ancil variable uses dimensions not defined through the source variable... ignore these
 			except:
-				print("WARNING: Error writing ancil variable {}".format(name))
+				print("WARNING: Error creating ancil variable {}".format(name))
 				print(sys.exc_info()[0])
 
 		return ds
@@ -223,6 +223,8 @@ class BaseVariable(object):
 
 
 		for i in range(len(indices)):
+
+			#print "__getitem__ ", i, indices, self._subset
 
 			if type(indices[i]) == list:
 				newindices.append(np.array(indices[i]) + self._subset[i].start)
@@ -711,12 +713,15 @@ class NetCDF4Dataset(Dataset):
 			else:
 				dtype = variable.dtype
 
-			var = ncfile.createVariable(name, dtype, [dim.name for dim in variable.dimensions])
+			try:
+				var = ncfile.createVariable(name, dtype, [dim.name for dim in variable.dimensions])
 
-			for key, value in variable.attributes.items():
-				var.setncattr(key, value)
+				for key, value in variable.attributes.items():
+					var.setncattr(key, value)
 
-			var[:] = variable[:]
+				var[:] = variable[:]
+			except:
+				print("{}.write: Error writing variable {}".format(cls.__name__, variable))
 
 		ncfile.close()
 
