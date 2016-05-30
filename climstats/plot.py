@@ -20,13 +20,14 @@ names = ds.ancil['name']
 
 if len(sys.argv) < 4:
 	for name in names:
-		print name
+		print name, ids[list(names[:]).index(name)]
 
 else:
-	index = list(names[:]).index(sys.argv[3])
+	index = list(ids[:]).index(sys.argv[3])
 	#print names[index]
 
 	values = variable[:,index]
+	print values
 
 	if len(sys.argv) > 4:
 		plottype = sys.argv[4]
@@ -44,4 +45,4 @@ else:
 
 		plt.bar(realtimes, values, width=widths)
 
-	plt.savefig('test.png')
+	plt.savefig("{}.png".format(sys.argv[3]))
