@@ -19,8 +19,9 @@ print("{} features found".format(feature_count))
 #print ncfile.coords
 
 ds = dataset.NetCDF4Dataset(sys.argv[2])
-variable = ds.variables[ds.variables.keys()[0]]
+variable = ds.variables[sys.argv[3]]
 
+print ds.variables
 # Try and get the latitude/longitude variables
 lats = variable.coords['latitude'][:]
 lons = variable.coords['longitude'][:]
@@ -123,7 +124,7 @@ for feature in shpfile:
 
 
 #outshpfile.close()
-dataset.NetCDF4Dataset.write(outds, sys.argv[3])
+dataset.NetCDF4Dataset.write(outds, sys.argv[4])
 
 
 
