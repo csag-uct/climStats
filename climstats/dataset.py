@@ -385,6 +385,11 @@ class BaseVariable(object):
 
 
 	def isubset_copy(self, **kwargs):
+		"""
+		Subsetting a Variable returns a new Variable with new subset coordinate variables.  The new variable and 
+		coordinate variables still reference the original source _data attribute so no data is copied.  The subsetting
+		is done through the _subset tuple
+		"""
 
 		newvar = self.copy()
 
