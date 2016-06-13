@@ -6,6 +6,7 @@ import sys
 import slicing
 import functions
 import dataset
+import plotting
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -25,6 +26,9 @@ parser.add_argument('--above', type=str)
 parser.add_argument('--below', type=str)
 parser.add_argument('--window_func', type=str)
 parser.add_argument('--window', type=str)
+parser.add_argument('--format', type=str, default='NETCDF4')
+
+parser.add_argument('--plot', type=str)
 
 parser.add_argument('-o', '--output', type=str, required=True)
 args = parser.parse_args()
@@ -103,7 +107,15 @@ groups = variable.groupby(args.aggregation)
 
 result = groups.apply(functions.registry[statistic]['function'], name=outname, outunits=functions.registry[statistic]['units'], tolerance=tolerance, scale=scale, offset=offset, **params)
 
-dataset.NetCDF4Dataset.write(result, args.output)
+print result._allvariables
+print result.variables[outname].coords
+
+if args.plot:
+	plot = plotting.plotmap(result.variables[outname])
+	plot.savefig(args.output)
+
+else:
+	dataset.NetCDF4Dataset.write(result, args.output, format=args.format)
 
 
 

@@ -115,7 +115,8 @@ class GroupBy(object):
 				newvar = Variable(variable.name, ds, [dim.name for dim in variable.dimensions], dtype=variable.dtype)
 				newvar.attributes = copy.copy(variable.attributes)
 				newvar[:] = variable[:]
-		
+		ds.make_coords()
+
 		# Create the ancilary variables
 		for name, variable in self.variable.dataset.ancil.items():
 			try:
@@ -698,7 +699,7 @@ class NetCDF4Dataset(Dataset):
 			NetCDF4Variable(name, self, dimensions=variable.dimensions, attributes=attrs, dtype=variable.dtype)
 
 	@classmethod
-	def write(cls, dataset, filename):
+	def write(cls, dataset, filename, format='NETCDF4'):
 
 		ncfile = netCDF4.Dataset(filename, 'w', format='NETCDF4')
 
