@@ -6,7 +6,7 @@ import sys
 import slicing
 import functions
 import dataset
-import plotting
+#import plotting
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
