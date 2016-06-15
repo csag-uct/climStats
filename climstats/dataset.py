@@ -174,7 +174,6 @@ class Dimension(object):
 class BaseVariable(object):
 
 	def __init__(self, name, dataset, dimensions, attributes={}, dtype=np.float32, fillvalue=1e10):
-#		print("{}.__init__: {}".format(self.__class__.__name__, dtype))
 
 		self.name = name
 		self._dimensions = []
@@ -513,7 +512,7 @@ class BaseVariable(object):
 class Variable(BaseVariable):
 
 	def __init__(self, *args, **kwargs):
-		#print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
+#		print("{}.__init__: {} {}".format(self.__class__.__name__, args,kwargs))
 		super(Variable, self).__init__(*args, **kwargs)
 
 		if self.dtype == str:
@@ -604,7 +603,10 @@ class Dataset(object):
 
 		if 'units' in attrs.keys():
 
-			units = cfunits.Units(attrs['units'])
+			try:
+				units = cfunits.Units(attrs['units'])
+			except:
+				return False, False
 
 			if units.islatitude:
 				return units, 'latitude'
@@ -624,8 +626,6 @@ class Dataset(object):
 		for name, variable in self._allvariables.items():
 
 			units, coordinate = self.cf_coordinate(variable.attributes)
-
-			#print name, units, coordinate
 			
 			if coordinate:
 
@@ -645,13 +645,15 @@ class Dataset(object):
 					except:
 						variable.calendar = 'standard'
 
-
 		# Find the data variables (with time dimension)
 		for name, variable in self._allvariables.items():
-
-			if name not in self.coords:
-				if self.time_dimension in variable.dimensions:
-					self.variables[name] = variable
+			try:
+				if name not in self.coords:
+					if self.time_dimension in variable.dimensions:
+						print 'got real variable'
+						self.variables[name] = variable
+			except:
+				pass
 
 		# All other variables are ancilary
 		for name, variable in self._allvariables.items():

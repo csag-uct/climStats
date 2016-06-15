@@ -97,13 +97,13 @@ def month(timevar):
 
 	return result
 
-def yearseason(timevar):
+def season(timevar):
 	"""
 	Group coordinate variable (assumed to be time and one dimensional) by unique seasons.  This
 	is used to produce timeseries of monthly statistics
 	"""
 
-	seasons = {'DJF':[11,0,1], 'MAM':[2,3,4], 'JJA':[5,6,7], 'SON':[8,9,10]}
+	seasons = {'DJF':[12,1,2], 'MAM':[3,4,5], 'JJA':[6,7,8], 'SON':[9,10,11]}
 
 	result = OrderedDict()
 
