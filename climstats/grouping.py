@@ -167,3 +167,32 @@ def yearseason(timevar):
 			result[key].append(index)
 
 	return result
+
+def day(timevar)
+	"""
+	Group coordinate variable (assumed to be time and one dimensional) by unique days.  This
+	is used to produce timeseries of daily statistics from sub-daily data
+	"""
+
+	result = OrderedDict()
+
+	# We have to assume the variable is a CF time index
+	try:
+		datetimes = netCDF4.num2date(timevar[:], timevar.units, calendar=timevar.calendar)
+	except:
+		raise GroupByError("Cannot convert coordinate to datetime(s).  yearmonth grouping requires a CF time coordinate variable")
+
+	# Step through all times
+	for index in range(0, len(datetimes)):
+
+		# Generate key
+		key = datetimes[index].year, datetimes[index].month, datetime[index].day
+		
+		# Add to results dictionary
+		if key not in result.keys():
+			result[key] = [index]
+		else:
+			result[key].append(index)
+
+	return result
+
