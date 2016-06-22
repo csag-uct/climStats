@@ -86,11 +86,13 @@ for feature in shpfile:
 			if poly.intersects(shape):
 				if poly.intersects(shape):
 					weights[feature_id,y,x] = poly.intersection(shape).area / poly.area
-					weights[feature_id] = weights[feature_id]/np.sum(weights[feature_id])  # Normalize to sum = 1
 			x += 1
 		
 		x = 0
 		y += 1
+
+	# Normalize to sum = 1
+	weights[feature_id] = weights[feature_id]/np.sum(weights[feature_id])  
 
 	for name, variable in ds.variables.items():
 		try:
