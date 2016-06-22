@@ -168,7 +168,7 @@ def yearseason(timevar):
 
 	return result
 
-def day(timevar)
+def day(timevar):
 	"""
 	Group coordinate variable (assumed to be time and one dimensional) by unique days.  This
 	is used to produce timeseries of daily statistics from sub-daily data
