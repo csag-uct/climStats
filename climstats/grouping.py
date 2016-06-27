@@ -216,7 +216,7 @@ def yearweek(timevar):
 
 		# Generate key
 		yearstart = datetime.datetime(datetimes[index].year, 1, 1)
-		key = (datetimes[index] - yearstart).days/7
+		key = (datetimes[index].year, (datetimes[index] - yearstart).days/7)
 		
 		# Add to results dictionary
 		if key not in result.keys():
