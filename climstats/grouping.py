@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import netCDF4
+import datetime
 import sys
 
 class GroupByException(Exception):
@@ -195,4 +196,35 @@ def day(timevar):
 			result[key].append(index)
 
 	return result
+
+
+def yearweek(timevar):
+	"""
+	Group coordinate variables (assumed to be time and one dimensional) by week of the year.
+	"""
+
+	result = OrderedDict()
+
+	# We have to assume the variable is a CF time index
+	try:
+		datetimes = netCDF4.num2date(timevar[:], timevar.units, calendar=timevar.calendar)
+	except:
+		raise GroupByError("Cannot convert coordinate to datetime(s).  yearmonth grouping requires a CF time coordinate variable")
+
+	# Step through all times
+	for index in range(0, len(datetimes)):
+
+		# Generate key
+		yearstart = datetime.datetime(datetimes[index].year, 1, 1)
+		key = (datetimes[index] - yearstart).days/7
+		
+		# Add to results dictionary
+		if key not in result.keys():
+			result[key] = [index]
+		else:
+			result[key].append(index)
+
+	return result
+
+
 
