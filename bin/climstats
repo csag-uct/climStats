@@ -5,9 +5,7 @@ import netCDF4
 import datetime
 import argparse
 import sys
-import climstats.slicing
-import climstats.functions
-import climstats.dataset
+from climstats import slicing, dataset, functions
 #import plotting
 import logging
 
