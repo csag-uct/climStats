@@ -1,0 +1,20 @@
+from setuptools import setup, find_packages
+version='0.1'
+
+setup(
+      name='climstats',
+      version=version,
+      description='Multi-dimensional environmental data manipulation and statitics',
+      url='https://github.com/csag-uct/climstats',
+      author='Jackaranda',
+      author_email='cjack@csag.uct.ac.za',
+      license='Apache',
+      packages=find_packages(exclude=['examples', 'tests']),
+      scripts=['climstats/climstats.py'],
+      install_requires=[
+      		'netCDF4',
+      		'numpy',
+      		'cfunits',
+      ],
+      zip_safe=True)
+
