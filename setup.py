@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-version='0.1'
+version='0.1.1'
 
 setup(
       name='climstats',
@@ -16,5 +16,5 @@ setup(
       		'numpy',
       		'cfunits',
       ],
-      zip_safe=True)
+      zip_safe=False)
 
