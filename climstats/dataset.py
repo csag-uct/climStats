@@ -185,13 +185,13 @@ class Dimension(object):
 
 	@property
 	def size(self):
-	"""Return the current size of the dimension"""
-	    return self._size
+		"""Return the current size of the dimension"""
+		return self._size
 
 	@property
 	def isunlimited(self):
-	"""Return True if the dimension is unlimited"""
-	    return self._unlimited
+		"""Return True if the dimension is unlimited"""
+		return self._unlimited
 	
 	def __unicode__(self):
 		return u'[{}: {}]'.format(self.name, self.size)
@@ -377,7 +377,7 @@ class BaseVariable(object):
 		self._data[indices] = value
 
 	def makecoords(self):
-		
+
 		# Reset to empty dict
 		self.coords = {}
 
