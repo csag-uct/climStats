@@ -1,11 +1,13 @@
+#!/usr/bin/env python
+
 import numpy as np
 import netCDF4
 import datetime
 import argparse
 import sys
-import slicing
-import functions
-import dataset
+import climstats.slicing
+import climstats.functions
+import climstats.dataset
 #import plotting
 import logging
 
@@ -46,7 +48,7 @@ else:
 
 # Try and open source dataset
 try:
-	source = dataset.NetCDF4Dataset(args.source)
+	source = climstats.dataset.NetCDF4Dataset(args.source)
 except:
 	logger.error("cannot open source dataset: {}".format(args.source))
 	logger.error(sys.exc_info())
@@ -95,7 +97,7 @@ for name, value in vars(args).items():
 				else:
 					othertimestep = 0
 
-				otherds = dataset.NetCDF4Dataset(otherfilename)
+				otherds = climstats.dataset.NetCDF4Dataset(otherfilename)
 				othervariable = otherds.variables[othervarname]
 				value = othervariable[othertimestep]
 
@@ -115,7 +117,7 @@ if args.plot:
 	plot.savefig(args.output)
 
 else:
-	dataset.NetCDF4Dataset.write(result, args.output, format=args.format)
+	climstats.dataset.NetCDF4Dataset.write(result, args.output, format=args.format)
 
 
 

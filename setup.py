@@ -10,7 +10,7 @@ setup(
       author_email='cjack@csag.uct.ac.za',
       license='Apache',
       packages=find_packages(exclude=['examples', 'tests']),
-      scripts=['climstats/climstats.py'],
+      scripts=['bin/climstats'],
       install_requires=[
       		'netCDF4',
       		'numpy',
