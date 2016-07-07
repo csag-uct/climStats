@@ -260,7 +260,7 @@ class BaseVariable(object):
 		"""
 
 		# We need to construct new indices by merging the provided indices with the current subset
-		newindices = []
+		newindices = list(self._subset)
 
 		# Force indices to be a tuple
 		if type(indices) != tuple:
@@ -298,11 +298,14 @@ class BaseVariable(object):
 				else:
 					stop += self._subset[i].start
 
-				newindices.append(slice(start, stop))
+			newindices[i] = (slice(start, stop))
+			#print i, newindices
 
 
 		# Just return the data subset using the new merged indices
-		return self._data[tuple(newindices)]
+		newindices = tuple(newindices)
+		#print "in __getitem__ ", newindices
+		return self._data[newindices]
 
 
 	def copy(self):
@@ -445,13 +448,15 @@ class BaseVariable(object):
 		"""
 
 		newvar = self.copy()
+		newsubset = list(newvar._subset)
 
-		print 'subsetting ', newvar.name, newvar._subset, kwargs
+
+		#print 'subsetting ', newvar.name, newvar._subset, kwargs
 		for name, value in kwargs.items():
 
 			if name in newvar.coords:
 				coord = newvar.coords[name]
-				print 'subsetting ', name, ' coordinate ', coord[:], ' with ', value
+				#print 'subsetting ', name, ' coordinate ', coord[:], ' with ', value
 
 				# For now we can't do multi dimensional coordinate variables
 				if len(coord.shape) > 1:
@@ -467,11 +472,12 @@ class BaseVariable(object):
 				if type(value) == slice:
 					start, stop = value.start, value.stop
 
-				print 'start, stop = ', start, stop
+				#print 'original start, stop = ', newvar._subset[i].start, newvar._subset[i].stop
+				#print 'start, stop = ', start, stop
 
 				# Add to original start
 				start += newvar._subset[i].start
-				stop += newvar._subset[i].stop
+				stop += newvar._subset[i].start
 
 				if start >= newvar._subset[i].stop:
 					start = newvar._subset[i].stop - 1
@@ -479,18 +485,20 @@ class BaseVariable(object):
 				if stop > newvar._subset[i].stop:
 					stop = newvar._subset[i].stop	
 
-				print 'new start, stop = ', start, stop
+				#print 'new start, stop = ', start, stop
 
-				newsubset = list(newvar._subset)
-				newsubset[i] = slice(start, stop)	
-				newvar._subset = tuple(newsubset)
-
-				newvar._shape = tuple([s.stop - s.start for s in newvar._subset])
+				newsubset[i] = slice(start, stop)
 
 				# Now we need to copy the coordinate variable and subset it
 				newvar.coords[name] = coord.copy()
-				newvar.coords[name]._subset = (newvar._subset[i],)
-				newvar.coords[name]._shape = (newvar._subset[i].stop - newvar._subset[i].start,)
+				newvar.coords[name]._subset = (newsubset[i],)
+				newvar.coords[name]._shape = (newsubset[i].stop - newsubset[i].start,)
+
+		newvar._subset = tuple(newsubset)
+		#print 'newvar._subset = ', newvar._subset
+
+		newvar._shape = tuple([s.stop - s.start for s in newvar._subset])
+		#print 'newvar._shape = ', newvar._shape
 
 		return newvar
 
@@ -503,14 +511,12 @@ class BaseVariable(object):
 			if name in self.coords:
 
 				coord = self.coords[name]
-				print "subset using ", coord[:], coord._subset
+				#print "subset ", name, " using ", coord[:], coord._subset, value
 
 				if type(value) == tuple:
 					start, stop = value
 				else:
 					start = stop = value
-
-				print "subset start, stop ", start, stop
 
 				# try and coerce into datetimes
 				try:
@@ -523,12 +529,22 @@ class BaseVariable(object):
 				except:
 					pass
 
-				print "subset start, stop ", start, stop
+				#print "subset start, stop ", start, stop
 
-				newargs[name] = slice(coord[:].searchsorted(start), coord[:].searchsorted(stop)+1)
+				coord_vals = coord[:]
+				start_index = np.argmin(np.abs(coord_vals - start))
+				stop_index = np.argmin(np.abs(coord_vals - stop))
 
-		print 'newargs = ', newargs
-		self.isubset(**newargs)
+				# We might need to swap around
+				if stop_index < start_index:
+					tmp = stop_index
+					stop_index = start_index
+					start_index = tmp
+
+				newargs[name] = slice(start_index, stop_index+1)
+
+#		print 'newargs = ', newargs
+		return self.isubset_copy(**newargs)
 
 
 	def groupby(self, param):
@@ -555,7 +571,6 @@ class BaseVariable(object):
 					groups[key] = slice(indices[0], indices[-1] + 1)
 
 		return GroupBy(funcname, self, coordinate, groups)
-
 
 
 	def __repr__(self):
@@ -703,7 +718,6 @@ class Dataset(object):
 			try:
 				if name not in self.coords:
 					if self.time_dimension in variable.dimensions:
-						print 'got real variable'
 						self.variables[name] = variable
 			except:
 				pass
