@@ -682,6 +682,8 @@ class Dataset(object):
 				return units, 'longitude'
 			if units.isreftime:
 				return units, 'time'
+			if units.ispressure:
+				return units, 'pressure'
 			else:
 				return units, False
 
