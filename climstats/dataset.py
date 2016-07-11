@@ -3,6 +3,7 @@ import cfunits
 import copy
 import sys
 from dateutil import parser
+import datetime
 
 import netCDF4
 import grouping
@@ -529,9 +530,18 @@ class BaseVariable(object):
 				except:
 					pass
 
-				#print "subset start, stop ", start, stop
+				print "subset start, stop ", start, stop
 
+				# Get the actual coordinate values
 				coord_vals = coord[:]
+
+				# If we have dates then we try and convert coordinate values to dates:
+				if type(start) == datetime.datetime:
+					try:
+						coord_vals = netCDF4.num2date(coord_vals, units=coord.units, calendar=coord.calendar)
+					except:
+						pass
+
 				start_index = np.argmin(np.abs(coord_vals - start))
 				stop_index = np.argmin(np.abs(coord_vals - stop))
 

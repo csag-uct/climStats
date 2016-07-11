@@ -46,7 +46,7 @@ else:
 
 # Try and open source dataset
 try:
-	source = climstats.dataset.NetCDF4Dataset(args.source)
+	source = dataset.NetCDF4Dataset(args.source)
 except:
 	logger.error("cannot open source dataset: {}".format(args.source))
 	logger.error(sys.exc_info())
@@ -95,7 +95,7 @@ for name, value in vars(args).items():
 				else:
 					othertimestep = 0
 
-				otherds = climstats.dataset.NetCDF4Dataset(otherfilename)
+				otherds = dataset.NetCDF4Dataset(otherfilename)
 				othervariable = otherds.variables[othervarname]
 				value = othervariable[othertimestep]
 
@@ -115,7 +115,7 @@ if args.plot:
 	plot.savefig(args.output)
 
 else:
-	climstats.dataset.NetCDF4Dataset.write(result, args.output, format=args.format)
+	dataset.NetCDF4Dataset.write(result, args.output, format=args.format)
 
 
 
