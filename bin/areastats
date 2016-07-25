@@ -6,8 +6,8 @@ import numpy as np
 import sys
 import argparse
 
-import climstats.dataset
-import climstats.gridfunctions
+import climstats.dataset as dataset
+import climstats.gridfunctions as gridfunctions
 
 
 # Read source/template shapefile
