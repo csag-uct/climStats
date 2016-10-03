@@ -272,15 +272,15 @@ class BaseVariable(object):
 
 			# For list indices just add the subset start offset
 			if type(indices[i]) == list:
-				newindices.append(np.array(indices[i]) + self._subset[i].start)
+				newindices[i] = np.array(indices[i]) + self._subset[i].start
 
 			# For array indices just add the subset start offset
 			elif type(indices[i]) == np.ndarray:
-				newindices.append(indices[i] + self._subset[i].start)
+				newindices[i] = indices[i] + self._subset[i].start
 
 			# For single integer indices add the subset start offset
 			elif type(indices[i]) == int:
-				newindices.append(indices[i] + self._subset[i].start)
+				newindices[i] = indices[i] + self._subset[i].start
 
 			# For slice indices we need to do more...
 			elif type(indices[i]) == slice:
@@ -299,13 +299,13 @@ class BaseVariable(object):
 				else:
 					stop += self._subset[i].start
 
-			newindices[i] = (slice(start, stop))
-			#print i, newindices
-
+				newindices[i] = (slice(start, stop))
+	
 
 		# Just return the data subset using the new merged indices
 		newindices = tuple(newindices)
 		#print "in __getitem__ ", newindices
+	
 		return self._data[newindices]
 
 
@@ -568,7 +568,10 @@ class BaseVariable(object):
 		try:
 			func = eval('grouping.{}'.format(funcname))
 		except:
+			logging.error("Can't find grouping function {}".format(funcname))
 			pass
+		else:
+			logging.info("Using grouping function {}".format(func))
 
 		# Run the grouping funciton on the coordinate variable
 		groups = func(coordinate)

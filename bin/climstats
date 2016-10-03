@@ -5,6 +5,12 @@ import netCDF4
 import datetime
 import argparse
 import sys
+
+try:
+	import climstats
+except:
+	sys.path.append('/home/cjack/work/projects/code/climstats')
+
 from climstats import slicing, dataset, functions
 #import plotting
 import logging
