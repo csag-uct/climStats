@@ -6,6 +6,11 @@ import numpy as np
 import sys
 import argparse
 
+try:
+	import climstats
+except:
+	sys.path.append('..')
+
 import climstats.dataset as dataset
 import climstats.gridfunctions as gridfunctions
 
