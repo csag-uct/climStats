@@ -1,6 +1,8 @@
 import numpy as np
 import scipy
 
+from numba import jit
+
 def make_percentile_function(percentile):
 
 	def f(data, axis):
@@ -53,8 +55,30 @@ def percentile99th(data, **kwargs):
 def days(data, axis=0, **kwargs):
 	return generic(data, np.ma.count, **kwargs)
 
+#@jit
+def maximum_spell(data, axis=0, above=None, below=None, **kwargs):
 
-#def spell_days(data, func)
+	# Mask less than above and greater than below
+	if above != None:
+		data = np.ma.masked_array(data, data <= above)
+	if below != None:
+		data = np.ma.masked_array(data, data >= below)
+
+	onezeros = (~np.ma.getmaskarray(data)).astype(int)
+
+	shape = list(onezeros.shape)
+
+	#shape[axis] -= 1
+
+	tmp = np.zeros(tuple(shape))
+
+	for i in range(1,onezeros.shape[axis]):
+		tmp[i] = tmp[i-1] + onezeros[i]
+		tmp[i] *= onezeros[i]
+
+	#print(tmp.max(axis=axis))
+
+	return tmp.max(axis=axis)
 
 
 def window_generic(data, func, axis=0, window=1, above=None, below=None, window_func=np.ma.sum):
@@ -109,6 +133,7 @@ registry = {
 	'percentile95th': {'function': percentile95th, 'units':None},
 	'percentile99th': {'function': percentile99th, 'units':None},
 	'days': {'function': days, 'units':'days'},
+	'maxspell':{'function':maximum_spell, 'units':'days'},
 	'rolling_maximum': {'function': window_maximum, 'units':None},
 	'rolling_days': {'function': window_days, 'units':'days'}
 }
