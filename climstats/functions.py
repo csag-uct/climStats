@@ -55,30 +55,32 @@ def percentile99th(data, **kwargs):
 def days(data, axis=0, **kwargs):
 	return generic(data, np.ma.count, **kwargs)
 
-#@jit
-def maximum_spell(data, axis=0, above=None, below=None, **kwargs):
+#@jit(nopython=True)
+def maximum_spell(data, axis=0, above=1e20, below=1e20, **kwargs):
 
 	# Mask less than above and greater than below
-	if above != None:
+	if above != 1e20:
 		data = np.ma.masked_array(data, data <= above)
-	if below != None:
+	if below != 1e20:
 		data = np.ma.masked_array(data, data >= below)
 
 	onezeros = (~np.ma.getmaskarray(data)).astype(int)
 
+	print(onezeros[:,1])
 	shape = list(onezeros.shape)
 
 	#shape[axis] -= 1
 
-	tmp = np.zeros(tuple(shape))
+	tmp = np.zeros(onezeros.shape)
 
 	for i in range(1,onezeros.shape[axis]):
 		tmp[i] = tmp[i-1] + onezeros[i]
 		tmp[i] *= onezeros[i]
 
-	#print(tmp.max(axis=axis))
-
-	return tmp.max(axis=axis)
+	result = np.ma.filled(tmp.max(axis=axis), fill_value=0.0)
+	print(result)
+	
+	return result
 
 
 def window_generic(data, func, axis=0, window=1, above=None, below=None, window_func=np.ma.sum):
