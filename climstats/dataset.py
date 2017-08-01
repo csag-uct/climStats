@@ -767,20 +767,32 @@ class NetCDF4Dataset(Dataset):
 
 	def __init__(self, uri):
 
-		self.ncfile = netCDF4.Dataset(uri)
+
+		# If uri is a list then try MFDataset
+
+		if len(uri) > 1:
+			self.ncfile = netCDF4.MFDataset(uri)
+		else:
+			self.ncfile = netCDF4.Dataset(uri[0])
 
 		dimensions = []
 		for name, dim in self.ncfile.dimensions.items():
-			dimensions.append((dim.name, dim.size, dim.isunlimited()))
+			try:
+				dimensions.append((dim.name, dim.size, dim.isunlimited()))
+			except:
+				pass
 
 		super(NetCDF4Dataset, self).__init__(dimensions=dimensions)
 
 		for name, variable in self.ncfile.variables.items():
-			attrs = {}
-			for key in variable.ncattrs():
-				attrs[key] = variable.getncattr(key)
+			try:
+				attrs = {}
+				for key in variable.ncattrs():
+					attrs[key] = variable.getncattr(key)
 
-			NetCDF4Variable(name, self, dimensions=variable.dimensions, attributes=attrs, dtype=variable.dtype)
+				NetCDF4Variable(name, self, dimensions=variable.dimensions, attributes=attrs, dtype=variable.dtype)
+			except:
+				pass
 
 	@classmethod
 	def write(cls, dataset, filename, format='NETCDF4'):
