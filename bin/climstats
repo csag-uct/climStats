@@ -5,6 +5,7 @@ import netCDF4
 import datetime
 import argparse
 import sys
+import glob
 
 try:
 	import climstats
@@ -51,13 +52,16 @@ if args.outname:
 else:
 	outname = varname
 
-# Try and open source dataset
+# Try and open source dataset which might be wildcard 
+sources = glob.glob(args.source)
+
 try:
-	source = dataset.NetCDF4Dataset(args.source)
+	source = dataset.NetCDF4Dataset(sources)
 except:
 	logger.error("cannot open source dataset: {}".format(args.source))
 	logger.error(sys.exc_info())
 	sys.exit(1)
+
 
 logger.info("processing variable {} from {} ".format(varname, args.source))
 
