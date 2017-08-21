@@ -1,5 +1,6 @@
 import numpy as np
-import scipy
+import scipy.stats
+import matplotlib.pyplot as plt
 
 from numba import jit
 
@@ -124,6 +125,52 @@ def window_days(data, **kwargs):
 	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
+def spi(data, length=1):
+	
+	result = np.empty(data.shape)
+	result[:] = 1e10
+
+	length = int(length)
+
+	print('spi length', length)
+	print('spi data.shape', data.shape)
+	
+
+	for index in np.ndindex(data.shape[1:]):
+		slices = [slice(None)]
+		slices.extend(index)
+
+		values = data[slices]
+		
+		if values.count():
+			print(index)
+
+			tave = []
+			for i in range(length, data.shape[0]):
+				tave.append(values[i-length:i].mean(axis=0))
+			tave = np.array(tave)
+
+			shape, loc, scale = scipy.stats.gamma.fit(tave)
+			dist = scipy.stats.gamma(shape, loc=loc, scale=scale)
+			cdfs = dist.cdf(tave)*0.9999
+			spi = scipy.stats.norm.ppf(cdfs)
+
+			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
+			print 'shape, loc, scale = ', shape, loc, scale
+			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
+			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
+			print
+
+			result[slices][length:] = spi
+
+			#plt.clf()
+			#x = np.linspace(dist.ppf(0.000001), dist.ppf(0.99999999), 100)
+			#plt.plot(x, dist.pdf(x))
+			#plt.hist(values, normed=True, histtype='stepfilled', alpha=0.2)
+			#plt.title('shape, loc, scale = {}, {}, {}'.format(shape, loc, scale))
+			#plt.show()
+
+	return np.ma.masked_greater(result, 1e9)
 
 registry = {
 	'mean': {'function': mean, 'units':None },
@@ -137,5 +184,6 @@ registry = {
 	'days': {'function': days, 'units':'days'},
 	'maxspell':{'function':maximum_spell, 'units':'days'},
 	'rolling_maximum': {'function': window_maximum, 'units':None},
-	'rolling_days': {'function': window_days, 'units':'days'}
+	'rolling_days': {'function': window_days, 'units':'days'},
+	'spi': {'function':spi, 'units':'spi'}
 }

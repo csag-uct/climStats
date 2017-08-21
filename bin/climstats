@@ -9,7 +9,7 @@ import sys
 try:
 	import climstats
 except:
-	sys.path.append('/home/cjack/work/projects/code/climstats')
+	sys.path.append('..')
 
 from climstats import slicing, dataset, functions
 #import plotting
@@ -24,6 +24,7 @@ parser.add_argument('source', type=str)
 parser.add_argument('variable', type=str)
 parser.add_argument('-a', '--aggregation', type=str, required=True)
 parser.add_argument('-s', '--statistic', type=str, required=True)
+parser.add_argument('--post', type=str, required=False)
 parser.add_argument('-n', '--outname', type=str)
 parser.add_argument('--scale', type=float, default=1.0)
 parser.add_argument('--offset', type=float, default=0.0)
@@ -115,6 +116,15 @@ result = groups.apply(functions.registry[statistic]['function'], name=outname, o
 
 print result._allvariables
 print result.variables[outname].coords
+
+if args.post:
+
+	postargs = args.post.split(',')
+
+	func = functions.registry[postargs[0]]['function']
+	print('post', func, postargs)
+	result.variables[outname][:] = func(result.variables[outname][:], *postargs[1:])
+
 
 if args.plot:
 	plot = plotting.plotmap(result.variables[outname])
