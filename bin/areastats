@@ -9,7 +9,11 @@ import argparse
 try:
 	import climstats
 except:
+<<<<<<< HEAD
 	sys.path.append('/home/cjack/work/code/climstats')
+=======
+	sys.path.append('/home/cjack/work/projects/code/climstats/')
+>>>>>>> 052ca4a70ec4d12b01ed519c5afe1c12873021b5
 
 import climstats.dataset as dataset
 import climstats.gridfunctions as gridfunctions
