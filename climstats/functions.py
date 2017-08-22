@@ -125,7 +125,7 @@ def window_days(data, **kwargs):
 	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
-def spi(data, length, ):
+def spi(data, length, fit_start=None, fit_end=None):
 	
 	result = np.empty(data.shape)
 	result[:] = 1e10
@@ -140,7 +140,6 @@ def spi(data, length, ):
 		
 		slices = [slice(None)]
 		slices.extend(index)
-		print(slices)
 
 		values = data[slices]
 		
@@ -152,16 +151,21 @@ def spi(data, length, ):
 				tave.append(values[i-length:i].mean(axis=0))
 			tave = np.array(tave)
 
-			shape, loc, scale = scipy.stats.gamma.fit(tave)
+			if fit_start and fit_end:
+				fit_start, fit_end = int(fit_start), int(fit_end)				
+				shape, loc, scale = scipy.stats.gamma.fit(tave[fit_start-length:fit_end-length])
+			else:
+				shape, loc, scale = scipy.stats.gamma.fit(tave)
+
 			dist = scipy.stats.gamma(shape, loc=loc, scale=scale)
 			cdfs = dist.cdf(tave)*0.9999
 			spi = scipy.stats.norm.ppf(cdfs)
 
-			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
-			print 'shape, loc, scale = ', shape, loc, scale
-			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
-			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
-			print
+#			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
+#			print 'shape, loc, scale = ', shape, loc, scale
+#			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
+#			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
+#			print
 
 			result[slices][length:] = spi
 
