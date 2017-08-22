@@ -125,12 +125,12 @@ def window_days(data, **kwargs):
 	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
-def spi(data, **kwargs):
+def spi(data, length, ):
 	
 	result = np.empty(data.shape)
 	result[:] = 1e10
 
-	length = int(kwargs['length'])
+	length = int(length)
 
 	print('spi length', length)
 	print('spi data.shape', data.shape)
@@ -140,6 +140,7 @@ def spi(data, **kwargs):
 		
 		slices = [slice(None)]
 		slices.extend(index)
+		print(slices)
 
 		values = data[slices]
 		

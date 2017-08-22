@@ -121,13 +121,16 @@ result = groups.apply(functions.registry[statistic]['function'], name=outname, o
 print result._allvariables
 print result.variables[outname].coords
 
+# Do post-processing if requested
 if args.post:
 
 	postargs = args.post.split(',')
 
 	func = functions.registry[postargs[0]]['function']
 	print('post', func, postargs)
+
 	result.variables[outname][:] = func(result.variables[outname][:], *postargs[1:])
+	result.variables[outname].attributes['units'] = functions.registry[postargs[0]]['units']
 
 
 if args.plot:
