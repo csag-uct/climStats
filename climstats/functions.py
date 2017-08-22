@@ -125,18 +125,19 @@ def window_days(data, **kwargs):
 	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
-def spi(data, length=1):
+def spi(data, **kwargs):
 	
 	result = np.empty(data.shape)
 	result[:] = 1e10
 
-	length = int(length)
+	length = int(kwargs['length'])
 
 	print('spi length', length)
 	print('spi data.shape', data.shape)
 	
 
 	for index in np.ndindex(data.shape[1:]):
+		
 		slices = [slice(None)]
 		slices.extend(index)
 
@@ -162,13 +163,6 @@ def spi(data, length=1):
 			print
 
 			result[slices][length:] = spi
-
-			#plt.clf()
-			#x = np.linspace(dist.ppf(0.000001), dist.ppf(0.99999999), 100)
-			#plt.plot(x, dist.pdf(x))
-			#plt.hist(values, normed=True, histtype='stepfilled', alpha=0.2)
-			#plt.title('shape, loc, scale = {}, {}, {}'.format(shape, loc, scale))
-			#plt.show()
 
 	return np.ma.masked_greater(result, 1e9)
 
