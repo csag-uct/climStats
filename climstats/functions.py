@@ -158,14 +158,14 @@ def spi(data, length, fit_start=None, fit_end=None):
 				shape, loc, scale = scipy.stats.gamma.fit(tave)
 
 			dist = scipy.stats.gamma(shape, loc=loc, scale=scale)
-			cdfs = dist.cdf(tave)*0.9999
+			cdfs = (dist.cdf(tave) + 0.0001) *0.9999   # Hack to avoid invalid (inf) values
 			spi = scipy.stats.norm.ppf(cdfs)
 
-#			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
-#			print 'shape, loc, scale = ', shape, loc, scale
-#			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
-#			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
-#			print
+			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
+			print 'shape, loc, scale = ', shape, loc, scale
+			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
+			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
+			print
 
 			result[slices][length:] = spi
 
