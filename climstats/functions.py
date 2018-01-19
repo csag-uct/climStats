@@ -1,5 +1,6 @@
 import numpy as np
-import scipy
+import scipy.stats
+import matplotlib.pyplot as plt
 
 def make_percentile_function(percentile):
 
@@ -121,6 +122,51 @@ def window_days(data, **kwargs):
 	return window_generic(data, np.ma.count, window_func=not_masked, **kwargs)
 
 
+def spi(data, length, fit_start=None, fit_end=None):
+	
+	result = np.empty(data.shape)
+	result[:] = 1e10
+
+	length = int(length)
+
+	print('spi length', length)
+	print('spi data.shape', data.shape)
+	
+
+	for index in np.ndindex(data.shape[1:]):
+		
+		slices = [slice(None)]
+		slices.extend(index)
+
+		values = data[slices]
+		
+		if values.count():
+			print(index)
+
+			tave = []
+			for i in range(length, data.shape[0]):
+				tave.append(values[i-length:i].mean(axis=0))
+			tave = np.array(tave)
+
+			if fit_start and fit_end:
+				fit_start, fit_end = int(fit_start), int(fit_end)				
+				shape, loc, scale = scipy.stats.gamma.fit(tave[fit_start-length:fit_end-length])
+			else:
+				shape, loc, scale = scipy.stats.gamma.fit(tave)
+
+			dist = scipy.stats.gamma(shape, loc=loc, scale=scale)
+			cdfs = (dist.cdf(tave) + 0.0001) *0.9999   # Hack to avoid invalid (inf) values
+			spi = scipy.stats.norm.ppf(cdfs)
+
+			print 'values(min, mean, max)', tave.min(), tave.mean(), tave.max()
+			print 'shape, loc, scale = ', shape, loc, scale
+			print 'cdf(min, mean, max) = ', cdfs.min(), cdfs.mean(), cdfs.max()
+			print 'spi(min, mean, median, max) = ', spi.min(), spi.mean(), np.median(spi), spi.max()
+			print
+
+			result[slices][length:] = spi
+
+	return np.ma.masked_greater(result, 1e9)
 
 registry = {
 	'mean': {'function': mean, 'units':None },
@@ -134,5 +180,6 @@ registry = {
 	'days': {'function': days, 'units':'days'},
 	'maxspell':{'function':maximum_spell, 'units':'days'},
 	'rolling_maximum': {'function': window_maximum, 'units':None},
-	'rolling_days': {'function': window_days, 'units':'days'}
+	'rolling_days': {'function': window_days, 'units':'days'},
+	'spi': {'function':spi, 'units':'spi'}
 }
