@@ -1,8 +1,6 @@
 import numpy as np
 import scipy
 
-from numba import jit
-
 def make_percentile_function(percentile):
 
 	def f(data, axis):
@@ -55,7 +53,6 @@ def percentile99th(data, **kwargs):
 def days(data, axis=0, **kwargs):
 	return generic(data, np.ma.count, **kwargs)
 
-#@jit(nopython=True)
 def maximum_spell(data, axis=0, above=1e20, below=1e20, **kwargs):
 
 	# Mask less than above and greater than below

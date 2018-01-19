@@ -775,6 +775,8 @@ class NetCDF4Dataset(Dataset):
 		else:
 			self.ncfile = netCDF4.Dataset(uri[0])
 
+		print self.ncfile
+
 		dimensions = []
 		for name, dim in self.ncfile.dimensions.items():
 			try:
@@ -785,14 +787,11 @@ class NetCDF4Dataset(Dataset):
 		super(NetCDF4Dataset, self).__init__(dimensions=dimensions)
 
 		for name, variable in self.ncfile.variables.items():
-			try:
-				attrs = {}
-				for key in variable.ncattrs():
-					attrs[key] = variable.getncattr(key)
+			attrs = {}
+			for key in variable.ncattrs():
+				attrs[key] = variable.getncattr(key)
 
-				NetCDF4Variable(name, self, dimensions=variable.dimensions, attributes=attrs, dtype=variable.dtype)
-			except:
-				pass
+			NetCDF4Variable(name, self, dimensions=variable.dimensions, attributes=attrs, dtype=variable.dtype)
 
 	@classmethod
 	def write(cls, dataset, filename, format='NETCDF4'):

@@ -9,15 +9,10 @@ import argparse
 try:
 	import climstats
 except:
-<<<<<<< HEAD
 	sys.path.append('/home/cjack/work/code/climstats')
-=======
-	sys.path.append('/home/cjack/work/projects/code/climstats/')
->>>>>>> 052ca4a70ec4d12b01ed519c5afe1c12873021b5
 
 import climstats.dataset as dataset
 import climstats.gridfunctions as gridfunctions
-
 
 # Read source/template shapefile
 shpfile = fiona.open(sys.argv[1])
@@ -30,7 +25,14 @@ print("{} features found".format(feature_count))
 #print ncfile.coords
 
 ds = dataset.NetCDF4Dataset(sys.argv[2])
-variable = ds.variables[sys.argv[3]]
+print ds
+
+try:
+	variable = ds.variables[sys.argv[3]]
+except:
+	print "Can't find {} in {}".format(sys.argv[3], ds.variables)
+	sys.exit(1)
+
 
 print ds.variables
 # Try and get the latitude/longitude variables
